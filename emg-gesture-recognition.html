@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMG Gesture Recognition Training & Testing</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.plot.ly/plotly-3.1.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .section h2 {
+            color: #444;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            background: white;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area:hover {
+            background: #f0f4ff;
+            border-color: #764ba2;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .upload-label {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.3s ease;
+        }
+        
+        .upload-label:hover {
+            transform: scale(1.05);
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .metric-label {
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .plot-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .real-time-section {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 30px;
+        }
+        
+        .gesture-display {
+            font-size: 3em;
+            text-align: center;
+            padding: 30px;
+            background: white;
+            border-radius: 15px;
+            margin: 20px 0;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        #fileList {
+            margin-top: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+        }
+        
+        .file-item {
+            padding: 5px;
+            margin: 2px 0;
+            background: #f0f4ff;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 EMG Gesture Recognition System</h1>
+        
+        <div class="section">
+            <h2>📁 Step 1: Load Training Data</h2>
+            <div class="upload-area">
+                <label for="fileInput" class="upload-label">
+                    Select All Training Files (.txt)
+                </label>
+                <input type="file" id="fileInput" multiple accept=".txt">
+                <div id="fileList"></div>
+            </div>
+            <div id="loadStatus" class="status" style="display:none;"></div>
+        </div>
+        
+        <div class="section">
+            <h2>📊 Step 2: Data Preprocessing & Visualization</h2>
+            <button class="btn" onclick="preprocessData()" id="preprocessBtn" disabled>
+                Preprocess Data
+            </button>
+            <div id="dataStats" class="metrics"></div>
+            <div id="rawSignalPlot" class="plot-container"></div>
+            <div id="filteredSignalPlot" class="plot-container"></div>
+        </div>
+        
+        <div class="section">
+            <h2>🧠 Step 3: Train Model</h2>
+            <button class="btn" onclick="trainModel()" id="trainBtn" disabled>
+                Train Neural Network
+            </button>
+            <button class="btn" onclick="saveModel()" id="saveBtn" disabled>
+                Save Model Locally
+            </button>
+            <div id="trainingStatus" class="status" style="display:none;"></div>
+            <div id="trainingMetrics" class="metrics"></div>
+            <div id="lossPlot" class="plot-container"></div>
+            <div id="confusionMatrix" class="plot-container"></div>
+        </div>
+        
+        <div class="real-time-section">
+            <h2>🎯 Real-Time Gesture Recognition</h2>
+            <button class="btn" onclick="loadSavedModel()" id="loadModelBtn">
+                Load Saved Model
+            </button>
+            <button class="btn" onclick="startRealTime()" id="startBtn" disabled>
+                Start Real-Time Recognition
+            </button>
+            <button class="btn" onclick="stopRealTime()" id="stopBtn" disabled>
+                Stop Recognition
+            </button>
+            
+            <div class="gesture-display" id="gestureDisplay">
+                Ready to recognize gestures...
+            </div>
+            
+            <div>
+                <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                    <span>Confidence:</span>
+                    <span id="confidenceValue">0%</span>
+                </div>
+                <div class="confidence-bar">
+                    <div class="confidence-fill" id="confidenceFill" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <div id="realtimeSignalPlot" class="plot-container"></div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let rawData = [];
+        let processedData = null;
+        let model = null;
+        let isRealTimeActive = false;
+        let windowSize = 50; // Window size for feature extraction
+        let stepSize = 10; // Step size for sliding window
+        
+        // File input handler
+        document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+        
+        async function handleFileSelect(event) {
+            const files = event.target.files;
+            if (files.length === 0) return;
+            
+            rawData = [];
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '<strong>Selected files:</strong><br>';
+            
+            for (let file of files) {
+                const content = await readFile(file);
+                const lines = content.trim().split('\n');
+                
+                for (let line of lines) {
+                    if (line.trim()) {
+                        const parts = line.split(',').map(s => s.trim());
+                        if (parts.length >= 3) {
+                            rawData.push({
+                                timestamp: parseFloat(parts[0]),
+                                value: parseFloat(parts[1]),
+                                label: parseInt(parts[2]),
+                                filename: file.name
+                            });
+                        }
+                    }
+                }
+                
+                fileList.innerHTML += `<div class="file-item">✓ ${file.name}</div>`;
+            }
+            
+            const status = document.getElementById('loadStatus');
+            status.className = 'status success';
+            status.textContent = `Successfully loaded ${rawData.length} samples from ${files.length} files`;
+            status.style.display = 'block';
+            
+            document.getElementById('preprocessBtn').disabled = false;
+        }
+        
+        function readFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+        
+        // Butterworth filter implementation
+        function butterworthFilter(data, cutoff, fs, order = 4) {
+            // Simplified butterworth filter
+            const rc = 1.0 / (cutoff * 2 * Math.PI);
+            const dt = 1.0 / fs;
+            const alpha = dt / (rc + dt);
+            
+            let filtered = [];
+            let prev = data[0];
+            
+            for (let i = 0; i < data.length; i++) {
+                let current = alpha * data[i] + (1 - alpha) * prev;
+                filtered.push(current);
+                prev = current;
+            }
+            
+            return filtered;
+        }
+        
+        // Extract features from a window of data
+        function extractFeatures(window) {
+            const features = [];
+            
+            // Time domain features
+            const mean = window.reduce((a, b) => a + b, 0) / window.length;
+            const variance = window.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / window.length;
+            const std = Math.sqrt(variance);
+            const rms = Math.sqrt(window.reduce((a, b) => a + b * b, 0) / window.length);
+            const mav = window.reduce((a, b) => a + Math.abs(b), 0) / window.length;
+            
+            // Zero crossing rate
+            let zcr = 0;
+            for (let i = 1; i < window.length; i++) {
+                if ((window[i] >= 0 && window[i-1] < 0) || (window[i] < 0 && window[i-1] >= 0)) {
+                    zcr++;
+                }
+            }
+            
+            // Waveform length
+            let wl = 0;
+            for (let i = 1; i < window.length; i++) {
+                wl += Math.abs(window[i] - window[i-1]);
+            }
+            
+            // Slope sign changes
+            let ssc = 0;
+            for (let i = 1; i < window.length - 1; i++) {
+                const diff1 = window[i] - window[i-1];
+                const diff2 = window[i+1] - window[i];
+                if (diff1 * diff2 < 0) {
+                    ssc++;
+                }
+            }
+            
+            features.push(mean, std, rms, mav, zcr, wl, ssc);
+            
+            // Add percentiles
+            const sorted = [...window].sort((a, b) => a - b);
+            const p25 = sorted[Math.floor(window.length * 0.25)];
+            const p50 = sorted[Math.floor(window.length * 0.50)];
+            const p75 = sorted[Math.floor(window.length * 0.75)];
+            features.push(p25, p50, p75);
+            
+            return features;
+        }
+        
+        async function preprocessData() {
+            if (rawData.length === 0) return;
+            
+            const stats = document.getElementById('dataStats');
+            stats.innerHTML = '';
+            
+            // Group data by label
+            const pinchData = rawData.filter(d => d.label === 2);
+            const rotateData = rawData.filter(d => d.label === 1);
+            
+            // Display statistics
+            stats.innerHTML = `
+                <div class="metric-card">
+                    <div class="metric-value">${rawData.length}</div>
+                    <div class="metric-label">Total Samples</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">${pinchData.length}</div>
+                    <div class="metric-label">Pinch Samples</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">${rotateData.length}</div>
+                    <div class="metric-label">Rotate Samples</div>
+                </div>
+            `;
+            
+            // Plot raw signals
+            const rawValues = rawData.map(d => d.value);
+            const timestamps = rawData.map((d, i) => i);
+            
+            Plotly.newPlot('rawSignalPlot', [{
+                x: timestamps.slice(0, 1000),
+                y: rawValues.slice(0, 1000),
+                type: 'scatter',
+                name: 'Raw EMG Signal',
+                line: {color: '#667eea'}
+            }], {
+                title: 'Raw EMG Signal (First 1000 samples)',
+                xaxis: {title: 'Sample Index'},
+                yaxis: {title: 'Amplitude'},
+                height: 300
+            });
+            
+            // Apply filtering
+            const fs = 1000; // Assuming 1kHz sampling rate
+            const filteredValues = butterworthFilter(rawValues, 20, fs);
+            
+            Plotly.newPlot('filteredSignalPlot', [{
+                x: timestamps.slice(0, 1000),
+                y: filteredValues.slice(0, 1000),
+                type: 'scatter',
+                name: 'Filtered EMG Signal',
+                line: {color: '#764ba2'}
+            }], {
+                title: 'Filtered EMG Signal (20Hz Low-pass)',
+                xaxis: {title: 'Sample Index'},
+                yaxis: {title: 'Amplitude'},
+                height: 300
+            });
+            
+            // Create windowed features
+            processedData = {
+                features: [],
+                labels: []
+            };
+            
+            for (let i = 0; i <= filteredValues.length - windowSize; i += stepSize) {
+                const window = filteredValues.slice(i, i + windowSize);
+                const windowLabels = rawData.slice(i, i + windowSize).map(d => d.label);
+                
+                // Use majority voting for label
+                const label = windowLabels.reduce((a, b) => 
+                    windowLabels.filter(v => v === a).length >= windowLabels.filter(v => v === b).length ? a : b
+                );
+                
+                const features = extractFeatures(window);
+                processedData.features.push(features);
+                processedData.labels.push(label === 2 ? 1 : 0); // Convert to 0-1 labels
+            }
+            
+            document.getElementById('trainBtn').disabled = false;
+        }
+        
+        async function trainModel() {
+            if (!processedData) return;
+            
+            const status = document.getElementById('trainingStatus');
+            status.className = 'status info';
+            status.textContent = 'Training model...';
+            status.style.display = 'block';
+            
+            // Convert to tensors
+            const features = tf.tensor2d(processedData.features);
+            const labels = tf.tensor1d(processedData.labels, 'int32');
+            
+            // Normalize features
+            const featureMean = features.mean(0);
+            const featureStd = features.sub(featureMean).square().mean(0).sqrt();
+            const normalizedFeatures = features.sub(featureMean).div(featureStd.add(1e-7));
+            
+            // Store normalization parameters for later use
+            window.normParams = {
+                mean: await featureMean.array(),
+                std: await featureStd.array()
+            };
+            
+            // Split data
+            const splitIdx = Math.floor(normalizedFeatures.shape[0] * 0.8);
+            const xTrain = normalizedFeatures.slice([0, 0], [splitIdx, -1]);
+            const xTest = normalizedFeatures.slice([splitIdx, 0], [-1, -1]);
+            const yTrain = labels.slice([0], [splitIdx]);
+            const yTest = labels.slice([splitIdx], [-1]);
+            
+            // Create model
+            model = tf.sequential({
+                layers: [
+                    tf.layers.dense({
+                        inputShape: [processedData.features[0].length],
+                        units: 64,
+                        activation: 'relu',
+                        kernelRegularizer: tf.regularizers.l2({l2: 0.01})
+                    }),
+                    tf.layers.dropout({rate: 0.3}),
+                    tf.layers.dense({
+                        units: 32,
+                        activation: 'relu',
+                        kernelRegularizer: tf.regularizers.l2({l2: 0.01})
+                    }),
+                    tf.layers.dropout({rate: 0.2}),
+                    tf.layers.dense({
+                        units: 16,
+                        activation: 'relu'
+                    }),
+                    tf.layers.dense({
+                        units: 1,
+                        activation: 'sigmoid'
+                    })
+                ]
+            });
+            
+            model.compile({
+                optimizer: tf.train.adam(0.001),
+                loss: 'binaryCrossentropy',
+                metrics: ['accuracy']
+            });
+            
+            // Train model
+            const history = await model.fit(xTrain, yTrain, {
+                epochs: 100,
+                batchSize: 32,
+                validationSplit: 0.2,
+                callbacks: {
+                    onEpochEnd: (epoch, logs) => {
+                        if (epoch % 10 === 0) {
+                            status.textContent = `Training... Epoch ${epoch}/100 - Loss: ${logs.loss.toFixed(4)}`;
+                        }
+                    }
+                }
+            });
+            
+            // Evaluate on test set
+            const evaluation = await model.evaluate(xTest, yTest);
+            const testLoss = await evaluation[0].data();
+            const testAcc = await evaluation[1].data();
+            
+            // Get predictions for confusion matrix
+            const predictions = await model.predict(xTest).data();
+            const yTestArray = await yTest.data();
+            
+            // Calculate confusion matrix
+            let tp = 0, tn = 0, fp = 0, fn = 0;
+            for (let i = 0; i < predictions.length; i++) {
+                const pred = predictions[i] > 0.5 ? 1 : 0;
+                const actual = yTestArray[i];
+                
+                if (pred === 1 && actual === 1) tp++;
+                else if (pred === 0 && actual === 0) tn++;
+                else if (pred === 1 && actual === 0) fp++;
+                else if (pred === 0 && actual === 1) fn++;
+            }
+            
+            // Display metrics
+            const metrics = document.getElementById('trainingMetrics');
+            metrics.innerHTML = `
+                <div class="metric-card">
+                    <div class="metric-value">${(testAcc[0] * 100).toFixed(1)}%</div>
+                    <div class="metric-label">Test Accuracy</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">${(tp / (tp + fp) * 100).toFixed(1)}%</div>
+                    <div class="metric-label">Precision</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">${(tp / (tp + fn) * 100).toFixed(1)}%</div>
+                    <div class="metric-label">Recall</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">${(2 * tp / (2 * tp + fp + fn) * 100).toFixed(1)}%</div>
+                    <div class="metric-label">F1 Score</div>
+                </div>
+            `;
+            
+            // Plot training history
+            Plotly.newPlot('lossPlot', [
+                {
+                    y: history.history.loss,
+                    type: 'scatter',
+                    name: 'Training Loss',
+                    line: {color: '#667eea'}
+                },
+                {
+                    y: history.history.val_loss,
+                    type: 'scatter',
+                    name: 'Validation Loss',
+                    line: {color: '#764ba2'}
+                }
+            ], {
+                title: 'Training History',
+                xaxis: {title: 'Epoch'},
+                yaxis: {title: 'Loss'},
+                height: 300
+            });
+            
+            // Plot confusion matrix
+            const confusionData = [
+                [tn, fp],
+                [fn, tp]
+            ];
+            
+            Plotly.newPlot('confusionMatrix', [{
+                z: confusionData,
+                type: 'heatmap',
+                colorscale: 'Viridis',
+                showscale: false,
+                text: confusionData.map(row => row.map(val => val.toString())),
+                texttemplate: '%{text}',
+                textfont: {size: 20, color: 'white'},
+                x: ['Predicted Rotate', 'Predicted Pinch'],
+                y: ['Actual Rotate', 'Actual Pinch']
+            }], {
+                title: 'Confusion Matrix',
+                height: 350,
+                xaxis: {side: 'bottom'},
+                yaxis: {autorange: 'reversed'}
+            });
+            
+            status.className = 'status success';
+            status.textContent = `Model trained successfully! Test Accuracy: ${(testAcc[0] * 100).toFixed(1)}%`;
+            
+            document.getElementById('saveBtn').disabled = false;
+            document.getElementById('startBtn').disabled = false;
+            
+            // Clean up tensors
+            features.dispose();
+            labels.dispose();
+            normalizedFeatures.dispose();
+            xTrain.dispose();
+            xTest.dispose();
+            yTrain.dispose();
+            yTest.dispose();
+        }
+        
+        async function saveModel() {
+            if (!model) return;
+            
+            // Save model
+            await model.save('downloads://emg-gesture-model');
+            
+            // Save normalization parameters
+            const normParamsBlob = new Blob([JSON.stringify(window.normParams)], {type: 'application/json'});
+            const url = URL.createObjectURL(normParamsBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'normalization-params.json';
+            a.click();
+            
+            alert('Model and normalization parameters saved! You should have received 2 files.');
+        }
+        
+        async function loadSavedModel() {
+            const modelInput = document.createElement('input');
+            modelInput.type = 'file';
+            modelInput.accept = '.json';
+            modelInput.multiple = true;
+            
+            modelInput.onchange = async (e) => {
+                const files = e.target.files;
+                if (files.length < 2) {
+                    alert('Please select both model.json and weights files');
+                    return;
+                }
+                
+                try {
+                    model = await tf.loadLayersModel(tf.io.browserFiles(Array.from(files)));
+                    
+                    // Load normalization parameters
+                    const normInput = document.createElement('input');
+                    normInput.type = 'file';
+                    normInput.accept = '.json';
+                    
+                    normInput.onchange = async (e) => {
+                        const file = e.target.files[0];
+                        const text = await file.text();
+                        window.normParams = JSON.parse(text);
+                        
+                        document.getElementById('startBtn').disabled = false;
+                        alert('Model loaded successfully!');
+                    };
+                    
+                    normInput.click();
+                } catch (error) {
+                    alert('Error loading model: ' + error.message);
+                }
+            };
+            
+            modelInput.click();
+        }
+        
+        let realtimeBuffer = [];
+        let realtimeInterval = null;
+        
+        function startRealTime() {
+            if (!model || !window.normParams) {
+                alert('Please train or load a model first!');
+                return;
+            }
+            
+            isRealTimeActive = true;
+            realtimeBuffer = [];
+            
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            
+            // Simulate real-time data (replace with actual ESP32 data)
+            realtimeInterval = setInterval(() => {
+                // Simulate EMG data (replace with actual sensor reading)
+                const newValue = Math.random() * 4000;
+                realtimeBuffer.push(newValue);
+                
+                // Keep buffer size limited
+                if (realtimeBuffer.length > windowSize) {
+                    realtimeBuffer.shift();
+                }
+                
+                // Make prediction when we have enough data
+                if (realtimeBuffer.length === windowSize) {
+                    makePrediction(realtimeBuffer);
+                }
+                
+                // Update real-time plot
+                updateRealtimePlot();
+            }, 10); // 100Hz update rate
+        }
+        
+        function stopRealTime() {
+            isRealTimeActive = false;
+            clearInterval(realtimeInterval);
+            
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('gestureDisplay').textContent = 'Recognition stopped';
+        }
+        
+        async function makePrediction(buffer) {
+            // Apply same filtering as training
+            const filtered = butterworthFilter(buffer, 20, 1000);
+            
+            // Extract features
+            const features = extractFeatures(filtered);
+            
+            // Normalize using saved parameters
+            const normalizedFeatures = features.map((f, i) => 
+                (f - window.normParams.mean[i]) / (window.normParams.std[i] + 1e-7)
+            );
+            
+            // Make prediction
+            const input = tf.tensor2d([normalizedFeatures]);
+            const prediction = await model.predict(input).data();
+            input.dispose();
+            
+            const confidence = prediction[0];
+            const gesture = confidence > 0.5 ? 'PINCH' : 'ROTATE';
+            const confidencePercent = confidence > 0.5 ? 
+                (confidence * 100).toFixed(0) : 
+                ((1 - confidence) * 100).toFixed(0);
+            
+            // Update display
+            document.getElementById('gestureDisplay').innerHTML = 
+                `<div style="color: ${confidence > 0.5 ? '#764ba2' : '#667eea'}">
+                    ${gesture === 'PINCH' ? '✌️' : '🔄'} ${gesture}
+                </div>`;
+            
+            document.getElementById('confidenceValue').textContent = `${confidencePercent}%`;
+            document.getElementById('confidenceFill').style.width = `${confidencePercent}%`;
+        }
+        
+        function updateRealtimePlot() {
+            const plotData = realtimeBuffer.slice(-200); // Show last 200 points
+            
+            Plotly.react('realtimeSignalPlot', [{
+                y: plotData,
+                type: 'scatter',
+                name: 'Real-time EMG',
+                line: {color: '#667eea', width: 2}
+            }], {
+                title: 'Real-time EMG Signal',
+                xaxis: {title: 'Sample'},
+                yaxis: {title: 'Amplitude', range: [0, 4000]},
+                height: 250,
+                // ...existing code...
+                yaxis: {title: 'Amplitude', range: [0, 4000]},
+                height: 250
+            });
+        }
+
+        // Optional: Reset UI when page loads
+        window.onload = function() {
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('saveBtn').disabled = true;
+            document.getElementById('preprocessBtn').disabled = true;
+        };
+    </script>
+</body>
+</html>
